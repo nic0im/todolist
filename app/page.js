@@ -1,6 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
 import axios from "axios";
+import Stars from "./comps/Stars.js";
+import { useRouter } from "next/navigation";
+
 
 
 export default function Home() {
@@ -8,32 +11,58 @@ export default function Home() {
   const [tareaId, setTareaId] = useState("");
   const [tareaNombre, setTareaNombre] = useState("");
   const [tareaEstado, setTareaEstado] = useState(false);
-  const [tareaImportancia, setTareaImportancia] = useState(1);
-
+  const [tareaImportancia, setTareaImportancia] = useState(0);
+  const router = useRouter()
   const getTasks = async () => {
     try {
-      const response = await axios.get("https://txkwh4-8080.csb.app/Tareas",);
-      setTareas(response.data); // Assuming the tasks are returned as an array in the response
+        await axios.get("https://txkwh4-8080.csb.app/Tareas",{
+        headers: {
+          "Cache-Control": "no-cache",
+        },
+      }).then((res)=>{setTareas(res.data)});
+      ; // Assuming the tasks are returned as an array in the response
     } catch (err) {
       console.error(err);
     }
   };
-  const deleteTask = async () => {
+  const deleteTask = async (_id) => {
     try {
-      await axios.delete(`https://txkwh4-8080.csb.app/Tareas/${_id}`);
+
+      await axios.delete(`https://txkwh4-8080.csb.app/Tareas/${_id}`).then((res)=>{const nuevoArray = tareas.filter((obj) => obj._id !== res.data._id);return setTareas(nuevoArray)
+      
+      });
       console.log("Tarea eliminada");
     } catch (err) {
       console.log(err);
     }
   };
 
-  const handleInput = () => {
+  const handleInput = (ev) => {
+    
     setTareaNombre(ev.target.value);
   };
+
+  const setValorEstrellasHandle = (value)=>{
+    setTareaImportancia(value)
+    return
+  }
+  const handleAgregarTarea = async() => {
+    try{
+      await axios.post("https://txkwh4-8080.csb.app/Tareas/",{nombre: tareaNombre, estado:tareaEstado, importancia:tareaImportancia}).then((res)=>{setTareas([...tareas, res.data])}).then(()=>{setTareaNombre("")})
+      
+      return 
+    } catch(err){
+      console.log(err)
+      return
+    }
+
+
+  }
 
   useEffect(() => {
     getTasks();
   }, []); // Add an empty dependency array to run the effect only once
+
 
   return (
     <main className="">
@@ -46,39 +75,43 @@ export default function Home() {
               placeholder="Ingresar Tarea"
               className=" text-right rounded"
               onChange={handleInput}
+              value={tareaNombre}
             />
           </div>
-          <button className="border px-2 rounded text-white hover:text-black hover:bg-white bg-black">
+          <button 
+          onClick={handleAgregarTarea}
+          className="border px-2 rounded text-white hover:text-black hover:bg-white bg-black">
             {" "}
             Agregar tarea
-          </button>
+          </button> 
         </div>
-
-        <div className=" mt-5">
+        <Stars valorEstrellas={setValorEstrellasHandle}/>
+          
+        <div className=" mt-5 justify-between grid grid-cols-2 gap-6">
           {tareas?.map((t) => {
             return (
               <div
                 key={t.nombre}
-                className="flex gap-2 mt-2 justify-between flex-col"
+                className="flex gap-2 mt-2 flex-col border border-gray-500 p-4 rounded-md shadow bg-black/10 "
               >
-                <div className="flex">
+                <div className="flex justify-items-center justify-between">
                   <div
                     className={`${
                       t.estado
                         ? "text-green-400 line-through"
-                        : " text-orange-400"
-                    }`}
+                        : " text-black"
+                    } justify-items-center`}
                   >
                     {t.nombre}
                   </div>
-                  <div className="text-gray-600 static cursor-pointer flex gap-2 ">
+                  <div className="text-gray-600 static cursor-pointer flex gap-2">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
                       viewBox="0 0 24 24"
                       strokeWidth={1.5}
                       stroke="currentColor"
-                      className="w-5 h-5 ml-3 hover:w-6 hover:h-6 hover:text-white cursor-pointer static"
+                      className="w-5 h-5 ml-3 mt-[2px] hover:text-blue-500 cursor-pointer static"
                     >
                       <path
                         strokeLinecap="round"
@@ -88,7 +121,7 @@ export default function Home() {
                     </svg>
                     <button
                       onClick={() => {
-                        //deleteTask(t._id);
+                        deleteTask(t._id);
                       }}
                     >
                       <svg
@@ -97,7 +130,7 @@ export default function Home() {
                         viewBox="0 0 24 24"
                         strokeWidth={1.5}
                         stroke="currentColor"
-                        className="w-5 h-5 hover:w-6 hover:h-6 hover:text-white cursor-pointer static"
+                        className="w-5 h-5 hover:text-red-400 cursor-pointer static"
                       >
                         <path
                           strokeLinecap="round"
@@ -111,11 +144,11 @@ export default function Home() {
                 <div className="text-white">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    fill="white"
+                    fill="hover:black white"
                     viewBox="0 0 24 24"
                     strokeWidth={1}
-                    stroke="white"
-                    className="w-6 h-6"
+                    stroke="black"
+                    className="w-6 h-6 bg-transparent"
                   >
                     <path
                       strokeLinecap="round"
