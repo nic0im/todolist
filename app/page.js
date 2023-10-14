@@ -1,16 +1,38 @@
 "use client";
 import { useState, useEffect } from "react";
 import axios from "axios";
-import Stars from "./comps/Stars.js";
 import { useRouter } from "next/navigation";
 
+
+
 export default function Home() {
-  const [tareas, setTareas] = useState([]);
+  const [tareas, setTareas] = useState([]); 
   const [tareaId, setTareaId] = useState("");
+  const [tareaNombreAdd, setTareaNombreAdd] = useState("");
   const [tareaNombre, setTareaNombre] = useState("");
   const [tareaEstado, setTareaEstado] = useState(false);
   const [tareaImportancia, setTareaImportancia] = useState(0);
+  const [tareaDescripcion, setTareaDescripcion] = useState();
+  const [debounced, setDebounced] = useState("");
+
   const router = useRouter();
+  //Debounce update//////////////////////////////////////////
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebounced(tareaDescripcion);
+    }, 1500);
+
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [tareaDescripcion, tareaNombre]);
+
+  useEffect(() => {;
+    handleUpdate(tareaId);
+  }, [debounced]);
+  /////////////////////////////////////////////////////////
+
+  ///////OBTENER TODAS LAS TAREAS//////////////
   const getTasks = async () => {
     try {
       await axios
@@ -26,6 +48,12 @@ export default function Home() {
       console.error(err);
     }
   };
+
+  useEffect(() => {
+    getTasks();
+  }, []); // Add an empty dependency array to run the effect only once
+ ////////////////////////////////////////////////////////////////////
+
   const deleteTask = async (_id) => {
     try {
       await axios
@@ -41,26 +69,28 @@ export default function Home() {
   };
 
   const handleInput = (ev) => {
-    setTareaNombre(ev.target.value);
+    setTareaNombreAdd(ev.target.value);
   };
 
   const setValorEstrellasHandle = (value) => {
     setTareaImportancia(value);
     return;
   };
+
   const handleAgregarTarea = async () => {
     try {
       await axios
         .post("https://txkwh4-8080.csb.app/Tareas/", {
-          nombre: tareaNombre,
+          nombre: tareaNombreAdd,
           estado: tareaEstado,
           importancia: tareaImportancia,
+          descripcion: tareaDescripcion,
         })
         .then((res) => {
           setTareas([...tareas, res.data]);
         })
         .then(() => {
-          setTareaNombre("");
+          setTareaNombreAdd("");
         });
       return;
     } catch (err) {
@@ -69,67 +99,129 @@ export default function Home() {
     }
   };
 
-  
-
-  const handleUpdateTarea = () => {
-    return
-  }
-
   const handleUpdateEstadoTarea = async (_id, estado) => {
     const nuevoeEstado = !estado;
-    try { 
-      await axios.put(`https://txkwh4-8080.csb.app/Tareas/${_id}`, {estado: nuevoeEstado}) } 
-      catch (err) { console.log(err) }}
+    try {
+      await axios
+        .put(`https://txkwh4-8080.csb.app/Tareas/${_id}`, {
+          estado: nuevoeEstado,
+        })
+        .then((res) => {
+          console.log(res.data);
+        });
+    } catch (err) {
+      console.log(err);
+    }
+  };
 
-  useEffect(() => {
-    getTasks();
-  }, []); // Add an empty dependency array to run the effect only once
+  const handleUpdate = async (_id) => {
+    if (!_id) {
+      return;
+    }
+    const taskToUpdate = {
+      nombre: tareaNombre,
+      importancia: tareaImportancia,
+      descripcion: tareaDescripcion,
+    };
+
+    try {
+      console.log("handle update working");
+      await axios
+        .put(`https://txkwh4-8080.csb.app/Tareas/${_id}`, taskToUpdate)
+        .then(() => {
+          console.log(
+            "Actualizado--- reemplazar por una notificacion y reasignar a objetos locales"
+          );
+        });
+      return;
+    } catch (err) {
+      console.log(err);
+      return;
+    }
+  };
 
 
   return (
-    <main className="bg-gradient-to-r from-sky-500 to-indigo-500 h-full">
-      <div className="flex flex-col  gap-2 items-center justify-center overflow-y-auto">
-        <h1 className=" text-3xl">To do list</h1>
-        <div className="flex gap-4">
-          <div className=" flex">
-            <input
-              type="text"
-              placeholder="Ingresar Tarea"
-              className=" text-right rounded"
-              onChange={handleInput}
-              value={tareaNombre}
-            />
+    <main className="bg-gradient-to-b from-gray-300/30 to-black/40 h-full px-6">
+      <div className="flex flex-col gap-2 overflow-y-auto">
+        <div className="border border-red-400 p-4 flex justify-between mt-4">
+          <div className="border border-orange-600 text-4xl">
+            Proyecto nombre
           </div>
-          <button
-            onClick={handleAgregarTarea}
-            className="border px-2 rounded text-white hover:text-black hover:bg-white bg-black"
-          >
-            {" "}
-            Agregar tarea
-          </button>
+          <div className="border border-blue-800 w-fit flex mr-5">
+            <div className="flex gap-4">
+              <div className=" flex">
+                <input
+                  type="text"
+                  placeholder="Ingresar Tarea"
+                  className=" text-right rounded"
+                  onChange={handleInput}
+                />
+              </div>
+              <button
+                onClick={handleAgregarTarea}
+                className="border px-2 rounded text-white hover:text-black hover:bg-white bg-black"
+              >
+                {" "}
+                Agregar tarea
+              </button>
+            </div>
+          </div>
         </div>
-        <Stars valorEstrellas={setValorEstrellasHandle} />
-
-        <div className=" mt-5 justify-between grid grid-cols-2 gap-6 ">
+        <div className="flex justify-between px-4">
+        <div className="flex flex-col">
+          <label for="frutas">Filtrar por:</label>
+            <select id="filtros" name="filtro">
+              <option value="recientes">Recientes</option>
+              <option value="importancia">Importancia</option>
+            </select>
+          </div>
+          <div className="border border-black p-2 bg-black/10 rounded-md mr-6">
+            Mostrar Completadas
+          </div>
+         
+        </div>
+        <div className=" justify-between grid grid-cols-2 border border-green-700">
           {tareas?.map((t) => {
             return (
-              <div
+              <div //DIV PRINCIPAL
                 key={t.nombre}
-                className={`flex gap-2 mt-2 flex-col border border-green-700 p-4 rounded-md shadow ${t.estado ? "bg-green-300": "bg-white/40"} `}
+                className={`flex gap-2 mt-2  p-4 rounded-md shadow-md justify-between w-[700px] h-[200px] ${
+                  t.estado
+                    ? "hover:bg-green-400/60 bg-gradient-to-t from-green-300/40 to-green-300/80 "
+                    : "bg-white/40 "
+                } `}
               >
-                <div></div>
-                <div className="flex justify-between text-black">
-                  <div className="">
-                    <span className=" font-semibold">{t.nombre}</span>
-                  <p>
-                   Esta es la descripcion de la tarea
-                  </p>
-                  </div>
+                <div //DIV NOMBRE TAREA y DESCRIPCION
+                  className="flex flex-col w-full "
+                >
+                  <textarea
+                    className=" font-semibold text-xl bg-transparent"
+                    defaultValue={t.nombre}
+                    onChange={(ev) => {
+                      setTareaNombre(ev.target.value);
+                      setTareaDescripcion(t.descripcion);
+                      return setTareaId(t._id);
+                    }}
+                  />
+                  <textarea
+                    className=" bg-transparent h-full w-full"
+                    defaultValue={t.descripcion}
+                    //AGREGAR SETVALUE DESPUES DE UNOS SEGUNDOS Y HANDLE UPLOAD
+                    onChange={(event) => {
+                      setTareaDescripcion(event.target.value);
+                      setTareaNombre(t.nombre);
+                      return setTareaId(t._id);
+                    }}
+                  />
+                </div>
+                <div //DIV BUTTONS
+                >
                   <div className="text-gray-600 static cursor-pointer flex gap-2 flex-col">
                     <button
-                    onClick={() => {
-                      handleUpdateEstadoTarea(t._id, t.estado);
-                    }}
+                      onClick={() => {
+                        handleUpdateEstadoTarea(t._id, t.estado);
+                      }}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -144,31 +236,10 @@ export default function Home() {
                         />
                       </svg>
                     </button>
-                    <button
-                      onClick={() => {
-                        //deleteTask(t._id);
-                      }}
-                    >
-                      {" "}
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth={1.5}
-                        stroke="currentColor"
-                        className="w-5 h-5 ml- mt-[2px] hover:text-blue-500 cursor-pointer static"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
-                        />
-                      </svg>
-                    </button>
 
                     <button
                       onClick={() => {
-                        //deleteTask(t._id);
+                        deleteTask(t._id);
                       }}
                     >
                       <svg
@@ -187,9 +258,6 @@ export default function Home() {
                       </svg>
                     </button>
                   </div>
-                </div>
-                <div className="text-white">
-                  
                 </div>
               </div>
             ); // Use curly braces to interpolate 't.nombre'
